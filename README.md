@@ -1,7 +1,8 @@
 Java Etherpad Lite Client
 =========================
 
-[![Build Status](https://travis-ci.com/Yanko12/java-etherpad-lite.png?branch=master)](https://travis-ci.com/Yanko12/java-etherpad-lite)
+[![Build Status](https://travis-ci.com/Yanko12/java-etherpad-lite.svg?branch=master)](https://travis-ci.com/Yanko12/java-etherpad-lite)
+
 [![Coverage Status](https://coveralls.io/repos/github/Yanko12/java-etherpad-lite/badge.png?branch=master)](https://coveralls.io/github/Yanko12/java-etherpad-lite?branch=master)
 
 A Java client for Etherpad Lite’s HTTP JSON API.
