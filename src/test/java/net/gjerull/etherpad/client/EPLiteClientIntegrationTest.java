@@ -308,4 +308,172 @@ public class EPLiteClientIntegrationTest {
 		String Author3Name = client.getAuthorName(Author3Id);
 		assertEquals(Author2Name, Author3Name);
 	}
+
+	@Test
+	public void create_pad_move_and_copy() throws Exception {
+		
+		String keep = "keep";
+		String change = "change";
+		String padID = "integration-test-pad";
+		String copyPadId = "integration-test-pad-copy";
+		String movePadId = "integration-test-pad-move";
+	
+		mockServer.when(HttpRequest.request().withMethod("POST").withPath("/api/1.2.13/createPad")).respond(
+			HttpResponse.response().withStatusCode(200).withBody("{\"code\":0,\"message\":\"ok\",\"data\":null}"));
+	
+		client.createPad(padID, keep);
+   
+		mockServer.when(HttpRequest.request().withMethod("POST").withPath("/api/1.2.13/copyPad"))
+			.respond(HttpResponse.response().withStatusCode(200).withBody(
+			"{\"code\":0,\"message\":\"ok\",\"data\":{\"padID\":\"integration-test-pad-copy\"}}"));
+
+		client.copyPad(padID, copyPadId);
+
+		mockServer.when(HttpRequest.request().withMethod("GET").withPath("/api/1.2.13/getText"))
+			.respond(HttpResponse.response().withStatusCode(200)
+			.withBody("{\"code\":0,\"message\":\"ok\",\"data\":{\"text\":\"keep\\n\"}}"));
+
+		String copyPadText = (String) client.getText(copyPadId).get("text");
+	
+		mockServer.when(HttpRequest.request().withMethod("POST").withPath("/api/1.2.13/movePad")).respond(
+			HttpResponse.response().withStatusCode(200).withBody("{\"code\":0,\"message\":\"ok\",\"data\":null}"));
+	
+		client.movePad(padID, movePadId);
+		String movePadText = (String) client.getText(movePadId).get("text");
+
+		mockServer.when(HttpRequest.request().withMethod("POST").withPath("/api/1.2.13/setText")).respond(
+			HttpResponse.response().withStatusCode(200).withBody("{\"code\":0,\"message\":\"ok\",\"data\":null}"));
+	
+		client.setText(movePadId, change);
+		client.copyPad(movePadId, copyPadId, true);
+	
+		mockServer.clear(HttpRequest.request().withMethod("GET").withPath("/api/1.2.13/getText"));
+	
+		mockServer.when(HttpRequest.request().withMethod("GET").withPath("/api/1.2.13/getText"))
+		.respond(HttpResponse.response().withStatusCode(200)
+		.withBody("{\"code\":0,\"message\":\"ok\",\"data\":{\"text\":\"change\\n\"}}"));
+
+		String copyPadTextForce = (String) client.getText(copyPadId).get("text");
+		client.movePad(movePadId, copyPadId, true);
+		String movePadTextForce = (String) client.getText(copyPadId).get("text");
+   
+		mockServer.when(HttpRequest.request().withMethod("POST").withPath("/api/1.2.13/deletePad")).respond(
+			HttpResponse.response().withStatusCode(200).withBody("{\"code\":0,\"message\":\"ok\",\"data\":null}"));
+	
+		client.deletePad(copyPadId);
+		client.deletePad(padID);
+   
+		assertEquals(keep + "\n", copyPadText);
+		assertEquals(keep + "\n", movePadText);
+   
+		assertEquals(change + "\n", copyPadTextForce);
+		assertEquals(change + "\n", movePadTextForce);
+
+	}
+
+   @Test
+   public void create_pads_and_list_them() throws InterruptedException {
+
+	   String pad1 = "integration-test-pad-1";
+	   String pad2 = "integration-test-pad-2";
+
+	   	mockServer.when(HttpRequest.request().withMethod("POST").withPath("/api/1.2.13/createPad")).respond(
+			HttpResponse.response().withStatusCode(200).withBody("{\"code\":0,\"message\":\"ok\",\"data\":null}"));
+	   
+		client.createPad(pad1);
+		client.createPad(pad2);
+
+	   	Thread.sleep(100);
+	   
+	   	mockServer.when(HttpRequest.request().withMethod("GET").withPath("/api/1.2.13/listAllPads"))
+			.respond(HttpResponse.response().withStatusCode(200).withBody(
+			"{\"code\":0,\"message\":\"ok\",\"data\":{\"padIDs\":[\"integration-test-pad-1\",\"integration-test-pad-2\"]}}"));
+	   
+		List padIDs = (List) client.listAllPads().get("padIDs");
+
+	   	mockServer.when(HttpRequest.request().withMethod("POST").withPath("/api/1.2.13/deletePad")).respond(
+			HttpResponse.response().withStatusCode(200).withBody("{\"code\":0,\"message\":\"ok\",\"data\":null}"));
+	   
+		client.deletePad(pad1);
+	   	client.deletePad(pad2);
+
+	   	assertTrue(String.format("Size was %d", padIDs.size()), padIDs.size() >= 2);
+	   	assertTrue(padIDs.contains(pad1));
+	   	assertTrue(padIDs.contains(pad2));
+   }
+
+   @Test
+	public void create_pad_and_chat_about_it() {
+
+		String padID = "integration-test-pad-1";
+		String user1 = "user1";
+		String user2 = "user2";
+
+		mockServer.when(HttpRequest.request().withMethod("POST").withPath("/api/1.2.13/createAuthorIfNotExistsFor"))
+			.respond(HttpResponse.response().withStatusCode(200)
+			.withBody("{\"code\":0,\"message\":\"ok\",\"data\":{\"authorID\":\"a.01\"}}"));
+
+		Map response = client.createAuthorIfNotExistsFor(user1,"integration-author-1");		
+		String author1Id = (String) response.get("authorID");
+
+		mockServer.clear(HttpRequest.request().withMethod("POST").withPath("/api/1.2.13/createAuthorIfNotExistsFor"));
+
+		mockServer.when(HttpRequest.request().withMethod("POST").withPath("/api/1.2.13/createAuthorIfNotExistsFor"))
+			.respond(HttpResponse.response().withStatusCode(200)
+			.withBody("{\"code\":0,\"message\":\"ok\",\"data\":{\"authorID\":\"a.02\"}}"));
+
+		response = client.createAuthorIfNotExistsFor(user2, "integration-author-2");
+		String author2Id = (String) response.get("authorID");
+
+		mockServer.when(HttpRequest.request().withMethod("POST").withPath("/api/1.2.13/createPad")).respond(
+			HttpResponse.response().withStatusCode(200).withBody("{\"code\":0,\"message\":\"ok\",\"data\":null}"));
+
+		client.createPad(padID);
+
+		try {
+
+			mockServer.when(HttpRequest.request().withMethod("POST").withPath("/api/1.2.13/appendChatMessage"))
+				.respond(HttpResponse.response().withStatusCode(200)
+				.withBody("{\"code\":0,\"message\":\"ok\",\"data\":null}"));
+	
+			client.appendChatMessage(padID, "hi from user1", author1Id);
+			client.appendChatMessage(padID, "hi from user2", author2Id,System.currentTimeMillis() / 1000L);
+			client.appendChatMessage(padID, "bye from user1", author1Id,System.currentTimeMillis() / 1000L);
+
+			mockServer.when(HttpRequest.request().withMethod("GET").withPath("/api/1.2.13/getChatHead"))
+				.respond(HttpResponse.response().withStatusCode(200)
+				.withBody("{\"code\":0,\"message\":\"ok\",\"data\":{\"chatHead\":2}}"));
+	
+			response = client.getChatHead(padID);
+			long chatHead = (long) response.get("chatHead");
+			assertEquals(2, chatHead);
+   
+			mockServer.when(HttpRequest.request().withMethod("GET").withPath("/api/1.2.13/getChatHistory"))
+				.respond(HttpResponse.response().withStatusCode(200).withBody(
+				"{\"code\":0,\"message\":\"ok\",\"data\":{\"messages\": [ \"hi from user1\",\"hi from user2\",\"bye from user1\"]}}"));
+		
+			response = client.getChatHistory(padID);
+			List chatHistory = (List) response.get("messages");
+			assertEquals(3, chatHistory.size());
+
+			mockServer.clear(HttpRequest.request().withMethod("GET").withPath("/api/1.2.13/getChatHistory"));
+	
+			mockServer.when(HttpRequest.request().withMethod("GET").withPath("/api/1.2.13/getChatHistory"))
+				.respond(HttpResponse.response().withStatusCode(200).withBody(
+				"{\"code\":0,\"message\":\"ok\",\"data\":{\"messages\": [ {\"text\":\"hi from user1\"},{\"text\":\"hi from user2\"}]}}"));
+	
+			response = client.getChatHistory(padID, 0, 1);
+			chatHistory = (List) response.get("messages");
+			assertEquals(2, chatHistory.size());
+			assertEquals("hi from user2", ((Map) chatHistory.get(1)).get("text"));
+		} finally {
+	
+			mockServer.when(HttpRequest.request().withMethod("POST").withPath("/api/1.2.13/deletePad"))
+				.respond(HttpResponse.response().withStatusCode(200)
+				.withBody("{\"code\":0,\"message\":\"ok\",\"data\":null}"));
+			
+			client.deletePad(padID);
+		}
+   
+	}
 }
