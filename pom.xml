@@ -57,11 +57,16 @@
       <version>4.12</version>
       <scope>test</scope>
     </dependency>
-	 <dependency>
+	  <dependency>
       <groupId>org.mock-server</groupId>
       <artifactId>mockserver-netty</artifactId>
       <version>5.4.1</version>
     </dependency>
+    <dependency>
+			<groupId>com.puppycrawl.tools</groupId>
+			<artifactId>checkstyle</artifactId>
+			<version>8.15</version>
+		</dependency> 
   </dependencies>
 
 
@@ -140,7 +145,31 @@
         	<aggregate>true</aggregate>
     	</configuration>
     </plugin>
-    </plugins>
+    <plugin>
+				<groupId>org.pitest</groupId>
+				<artifactId>pitest-maven</artifactId>
+				<version>1.4.3</version>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-checkstyle-plugin</artifactId>
+				<version>3.0.0</version>
+			</plugin>
+    <plugin>
+				<groupId>com.github.spotbugs</groupId>
+				<artifactId>spotbugs-maven-plugin</artifactId>
+				<version>3.1.8</version>
+				<dependencies>
+					<!-- overwrite dependency on spotbugs if you want to specify the version 
+						of spotbugs -->
+					<dependency>
+						<groupId>com.github.spotbugs</groupId>
+						<artifactId>spotbugs</artifactId>
+						<version>3.1.9</version>
+					</dependency>
+				</dependencies>
+			</plugin>
+  </plugins>
   </build>
 
 
